@@ -95,22 +95,21 @@ class review_analysisController {
 
   static async createreview_servay(req, res) {
     try {
-      const { survey_review, user_id, qr_code_id,human_message } = req.body;
+      const { survey_review, user_id, qr_code_id } = req.body;
 
       const [existingServay] = await db.query("SELECT * FROM review_survey WHERE user_id = ? AND qr_code_id = ? ", [user_id, qr_code_id])
-     console.log(existingServay);
+      console.log(existingServay);
       if (existingServay.length > 0) {
         return res.status(409).json("For this buisness you already created a servay form")
       }
-      if (!survey_review || !user_id || !qr_code_id || !human_message) {
-        return res.status(400).json({ error: "All fields are required." });
-      }
+      // if (!survey_review || !user_id || !qr_code_id || !human_message) {
+      //   return res.status(400).json({ error: "All fields are required." });
+      // }
 
       const result = await servay_reviews.create({
         survey_review: JSON.stringify(survey_review),
         user_id,
         qr_code_id,
-        human_message
       });
 
       if (result) {
@@ -137,10 +136,12 @@ class review_analysisController {
         let [result] = await db.query(
           "SELECT * FROM review_survey WHERE user_id = ? AND qr_code_id = ?",
           [user_id, qr_code_id]
-        );
-
+        );  
+        let [ress] = await db.query("SELECT * FROM qr_code WHERE id = ? ", [qr_code_id[0]])
+        console.log(ress);
         result = result.map((e) => ({
           ...e,
+          language: ress[0].language,
           survey_review: e.survey_review ? JSON.parse(e.survey_review) : null,
         }));
 
