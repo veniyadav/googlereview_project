@@ -483,8 +483,3 @@ class companyController {
 
 
 export default companyController;
-
-
-
-
-
