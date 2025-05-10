@@ -14,7 +14,7 @@ class BaseModel {
     const [rows] = await db.query(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id]);
     console.log("rows.length", rows.length);
     console.log("rows", rows);
-    return rows.length > 0 ? rows[0] : null;
+    return rows ? rows[0] : null;
   }
 
   async getByBusinessId(id) {
