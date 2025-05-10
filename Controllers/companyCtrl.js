@@ -1,22 +1,22 @@
 import Controllers from "../Models/Model.js";
 import db from "../Config/Connection.js"
 import bcrypt from 'bcrypt';
-
+ 
 const company = new Controllers("company");
 const business_name = new Controllers("qr_code");
 import cloudinary from '../Config/cloudinary.js';
-
-
+ 
+ 
 cloudinary.config({
   cloud_name: 'dkqcqrrbp',
   api_key: '418838712271323',
   api_secret: 'p12EKWICdyHWx8LcihuWYqIruWQ'
 });
-
-
-
+ 
+ 
+ 
 class companyController {
-
+ 
   static async createCompany(req, res) {
     try {
       const { business_name, business_type, first_name, last_name, location, email, password, image } = req.body;
@@ -65,25 +65,24 @@ class companyController {
   }
  
  
-
   static async getallCompany(req, res) {
     try {
       const result = await company.getAll();
-
+ 
       if (result.length > 0) {
         return res.status(200).json({
           success: true,
           message: "Companies fetched successfully",
           data: result,
-
+ 
         });
       }
-
+ 
       return res.status(404).json({
         success: false,
         message: "No companies found.",
       });
-
+ 
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -92,35 +91,35 @@ class companyController {
       });
     }
   }
-
+ 
   static async getCompanyById(req, res) {
     try {
       const { id } = req.params;
-  
+ 
       if (!id) {
         return res.status(400).json({ error: "Company ID is required." });
       }
-  
+ 
       const companyData = await company.getById(id);
-  
+ 
       if (!companyData) {
         return res.status(404).json({ message: "Company not found." });
       }
-  
+ 
       const user_id = companyData.id;
-  
+ 
       const [businessReviews] = await db.query("SELECT * FROM review WHERE user_id = ?", [user_id]);
-  
+ 
       const totalReviews = businessReviews.length;
       const averageRating = totalReviews > 0
         ? parseFloat((businessReviews.reduce((acc, review) => acc + Number(review.rating || 0), 0) / totalReviews).toFixed(1))
         : 0;
-  
+ 
       // Get recent 2 reviews (sorted by created_at descending)
       const recentReviews = businessReviews
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 2);
-  
+ 
       return res.status(200).json({
         success: true,
         message: "Company fetched successfully",
@@ -129,22 +128,22 @@ class companyController {
         averageRating,
         recentReviews
       });
-  
+ 
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
   }
-  
+ 
   static async deleteCompany(req, res) {
     try {
       const { id } = req.params;
-
+ 
       if (!id) {
         return res.status(400).json({ error: "Company ID is required." });
       }
-
+ 
       const result = await company.delete(id); // delete from DB
-
+ 
       if (result.affectedRows > 0) {
         return res.status(200).json({
           success: true,
@@ -160,21 +159,21 @@ class companyController {
       return res.status(500).json({ error: error.message });
     }
   }
-
-
+ 
+ 
   static async editCompany(req, res) {
     try {
       const { id } = req.params;
       const { name, email, phone, password } = req.body;
-
+ 
       if (!id) {
         return res.status(400).json({ error: "User ID is required." });
       }
-
+ 
       if (!name && !email && !password && !req.files?.image) {
         return res.status(400).json({ error: "At least one field is required to update." });
       }
-
+ 
       const existingUser = await userTable.getById(id);
       if (!existingUser) {
         return res.status(404).json({ message: "User not found." });
@@ -188,20 +187,20 @@ class companyController {
         const hashedPassword = await bcrypt.hash(password, 10);
         updatedData.password = hashedPassword;
       }
-
+ 
       // Cloudinary image upload
       if (req.files && req.files.image) {
         const file = req.files.image;
         const cloudResult = await cloudinary.uploader.upload(file.tempFilePath);
         updatedData.image = cloudResult.secure_url;
       }
-
+ 
       const result = await userTable.update(id, updatedData);
-
+ 
       if (result.affectedRows === 0) {
         return res.status(400).json({ message: "User not updated. Please try again." });
       }
-
+ 
       return res.status(200).json({
         success: true,
         message: "User updated successfully",
@@ -210,18 +209,18 @@ class companyController {
       return res.status(500).json({ error: error.message });
     }
   }
-
+ 
   static async updateCompanyStatus(req, res) {
     try {
       const companyId = req.params.id;
       const { status } = req.body;
-
+ 
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
-
+ 
       const result = await company.update(companyId, { status });
-
+ 
       if (result.affectedRows > 0) {
         return res.status(200).json({
           success: true,
@@ -234,60 +233,60 @@ class companyController {
       return res.status(500).json({ error: error.message });
     }
   }
-
-
+ 
+ 
   static async getCompanyDetails(req, res) {
     try {
       const { business_id, brach_id } = req.query;
-
+ 
       // Check if both IDs are provided
       if (business_id && brach_id) {
         // Get total review count and average rating
         const [statsResult] = await db.query(
-          `SELECT 
+          `SELECT
               COUNT(*) AS total_reviews,
               AVG(rating) AS average_rating
-           FROM review 
+           FROM review
            WHERE user_id = ? AND qr_code_id = ?`,
           [business_id, brach_id]
         );
-
+ 
         // Get last 2 reviews by created_at
         const [lastTwoReviews] = await db.query(
-          `SELECT * FROM review 
-           WHERE user_id = ? AND qr_code_id = ? 
-           ORDER BY created_at DESC 
+          `SELECT * FROM review
+           WHERE user_id = ? AND qr_code_id = ?
+           ORDER BY created_at DESC
            LIMIT 2`,
           [business_id, brach_id]
         );
-
+ 
         return res.json({
           success: true,
           stats: statsResult[0],
           last_two_reviews: lastTwoReviews
         });
       }
-
+ 
       // If only business_id is provided, return its QR codes
       if (business_id) {
         const [qrResult] = await db.query(
           "SELECT headline, id FROM qr_code WHERE user_id = ?",
           [business_id]
         );
-
+ 
         return res.json({
           success: true,
           qr_codes: qrResult
         });
       }
-
+ 
       // If neither, return companies list
       const [companyResult] = await db.query("SELECT business_name, id FROM company");
       return res.json({
         success: true,
         companies: companyResult
       });
-
+ 
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -296,39 +295,39 @@ class companyController {
       });
     }
   }
-
+ 
   static async getCompanyDetailsforSentimentAnalytics(req, res) {
     try {
       const { business_id, brach_id, frequency } = req.query;
-
+ 
       if (business_id && brach_id) {
         // Get total review count and average rating
         const [statsResult] = await db.query(
-          `SELECT 
+          `SELECT
               COUNT(*) AS total_reviews,
               AVG(rating) AS average_rating
-           FROM review 
+           FROM review
            WHERE user_id = ? AND qr_code_id = ?`,
           [business_id, brach_id]
         );
-
+ 
         // Get last 2 reviews
         const [lastTwoReviews] = await db.query(
-          `SELECT * FROM review 
-           WHERE user_id = ? AND qr_code_id = ? 
-           ORDER BY created_at DESC 
+          `SELECT * FROM review
+           WHERE user_id = ? AND qr_code_id = ?
+           ORDER BY created_at DESC
            LIMIT 2`,
           [business_id, brach_id]
         );
-
+ 
         // Determine group by based on frequency
         let groupByClause = "DATE(created_at)";
         if (frequency === "monthly") groupByClause = "DATE_FORMAT(created_at, '%Y-%m')";
         else if (frequency === "yearly") groupByClause = "YEAR(created_at)";
-
+ 
         // Get sentiment breakdown
         const [sentimentStats] = await db.query(
-          `SELECT 
+          `SELECT
               ${groupByClause} as period,
               SUM(CASE WHEN rating >= 4 THEN 1 ELSE 0 END) AS positive_reviews,
               SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS neutral_reviews,
@@ -339,7 +338,7 @@ class companyController {
            ORDER BY period DESC`,
           [business_id, brach_id]
         );
-
+ 
         return res.json({
           success: true,
           // stats: statsResult[0],
@@ -347,7 +346,7 @@ class companyController {
           sentiment_trends: sentimentStats
         });
       }
-
+ 
       if (business_id) {
         const [qrResult] = await db.query(
           "SELECT headline, id FROM qr_code WHERE user_id = ?",
@@ -358,13 +357,13 @@ class companyController {
           qr_codes: qrResult
         });
       }
-
+ 
       const [companyResult] = await db.query("SELECT business_name, id FROM company");
       return res.json({
         success: true,
         companies: companyResult
       });
-
+ 
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -373,13 +372,8 @@ class companyController {
       });
     }
   }
-
+ 
 }
-
-
+ 
+ 
 export default companyController;
-
-
-
-
-
