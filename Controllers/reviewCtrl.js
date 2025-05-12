@@ -261,7 +261,7 @@ class reviewController {
         r.feedback,
         r.rating,
         r.created_at,
-        r.name,
+        r.email,
         r.image,
         ra.problems, 
         ra.solutions,
