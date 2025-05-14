@@ -7,3 +7,4 @@ CREATE TABLE review_survey (
     user_id INT,
     qr_code_id INT
 );
+

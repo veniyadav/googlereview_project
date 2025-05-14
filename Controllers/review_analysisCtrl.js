@@ -60,9 +60,9 @@ class review_analysisController {
       const { problems, sentiment, solutions, user_id, qr_code_id, review_id, summary, reply, emotional_tone,rating,email } = req.body;
 
       // Validate input data
-      if (!problems || !sentiment || !solutions || !user_id || !qr_code_id || !review_id || !summary || !reply || !emotional_tone || !rating || !email) {
-        return res.status(400).json({ error: "All fields are required." });
-      }
+      // if (!problems || !sentiment || !solutions || !user_id || !qr_code_id || !review_id || !summary || !reply || !emotional_tone || !rating || !email) {
+      //   return res.status(400).json({ error: "All fields are required." });
+      // }
 
       // Generate Order ID (if needed)
 
