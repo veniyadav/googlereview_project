@@ -308,14 +308,14 @@ class companyController {
     }
   }
 
-static async getCompanyDetailsForReviewMangement(req, res) {
-  try {
-    const { business_id, brach_id } = req.query;
+  static async getCompanyDetailsForReviewMangement(req, res) {
+    try {
+      const { business_id, brach_id } = req.query;
 
-    if (business_id && brach_id) {
-      // Total reviews, average rating, and rating distribution
-      const [statsResult] = await db.query(
-        `SELECT 
+      if (business_id && brach_id) {
+        // Total reviews, average rating, and rating distribution
+        const [statsResult] = await db.query(
+          `SELECT 
           COUNT(r.id) AS total_reviews,
           AVG(CAST(ra.rating AS DECIMAL(10,2))) AS average_rating,
           COUNT(CASE WHEN ra.rating = 1 THEN 1 END) AS one_star,
@@ -326,10 +326,10 @@ static async getCompanyDetailsForReviewMangement(req, res) {
         FROM review r
         LEFT JOIN review_analysis ra ON r.id = ra.review_id
         WHERE r.user_id = ? AND r.qr_code_id = ?`,
-        [business_id, brach_id]
-      );
-      const [lastTwoReviews] = await db.query(
-        `SELECT 
+          [business_id, brach_id]
+        );
+        const [lastTwoReviews] = await db.query(
+          `SELECT 
           r.*, 
           ra.problems, 
           ra.sentiment, 
@@ -344,56 +344,56 @@ static async getCompanyDetailsForReviewMangement(req, res) {
         WHERE r.user_id = ? AND r.qr_code_id = ?
         ORDER BY r.created_at DESC
         `,
-        [business_id, brach_id]
-      );
-console.log("lastTwoReviews", lastTwoReviews);
+          [business_id, brach_id]
+        );
+        console.log("lastTwoReviews", lastTwoReviews);
+        return res.json({
+          success: true,
+          stats: {
+            ...statsResult[0],
+            rating_distribution: {
+              1: statsResult[0].one_star || 0,
+              2: statsResult[0].two_star || 0,
+              3: statsResult[0].three_star || 0,
+              4: statsResult[0].four_star || 0,
+              5: statsResult[0].five_star || 0,
+            }
+          },
+          reviews: lastTwoReviews.map(review => ({
+            ...review,
+            problems: JSON.parse(review.problems || '[]'),
+            solutions: JSON.parse(review.solutions || '[]')
+          })),
+        });
+      }
+
+      if (business_id) {
+        const [qrResult] = await db.query(
+          "SELECT headline, id FROM qr_code WHERE user_id = ?",
+          [business_id]
+        );
+
+        return res.json({
+          success: true,
+          qr_codes: qrResult
+        });
+      }
+
+      // If neither, return companies list
+      const [companyResult] = await db.query("SELECT business_name, id FROM company");
       return res.json({
         success: true,
-        stats: {
-          ...statsResult[0],
-          rating_distribution: {
-            1: statsResult[0].one_star || 0,
-            2: statsResult[0].two_star || 0,
-            3: statsResult[0].three_star || 0,
-            4: statsResult[0].four_star || 0,
-            5: statsResult[0].five_star || 0,
-          }
-        },
-        reviews: lastTwoReviews.map(review => ({
-          ...review,
-          problems: JSON.parse(review.problems || '[]'),
-          solutions: JSON.parse(review.solutions || '[]')
-        })),
+        companies: companyResult
+      });
+
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred while fetching company, QR, or review data.",
+        error: error.message
       });
     }
-
-    if (business_id) {
-      const [qrResult] = await db.query(
-        "SELECT headline, id FROM qr_code WHERE user_id = ?",
-        [business_id]
-      );
-
-      return res.json({
-        success: true,
-        qr_codes: qrResult
-      });
-    }
-
-    // If neither, return companies list
-    const [companyResult] = await db.query("SELECT business_name, id FROM company");
-    return res.json({
-      success: true,
-      companies: companyResult
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred while fetching company, QR, or review data.",
-      error: error.message
-    });
   }
-}
 
 
   static async getCompanyDetailsforSentimentAnalytics(req, res) {
