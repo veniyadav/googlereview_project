@@ -11,6 +11,7 @@ router.delete("/deleteCompany/:id", companyController.deleteCompany);
 router.post("/updateCompanyStatus/:id", companyController.updateCompanyStatus);
 router.put("/editCompany/:id", companyController.editCompany)
 router.get("/getCompanyDetails", companyController.getCompanyDetails);
+router.get("/getCompanyDetailsForReviewMangement", companyController.getCompanyDetailsForReviewMangement);
 router.get("/getCompanyDetailsforSentimentAnalytics", companyController.getCompanyDetailsforSentimentAnalytics);
 
 
