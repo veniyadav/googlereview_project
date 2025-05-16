@@ -5,48 +5,66 @@ import db from "../Config/Connection.js"
 
 class review_analysisController {
 
-  static async getAllReviewAnalysis(req, res) {
+  static async getCurrentMonthReviewAnalysis(req, res) {
     try {
-      const { business_id, branch_id, from_date, to_date } = req.query;
 
-      if (!business_id || !branch_id) {
-        return res.status(400).json({ success: false, message: "Missing business_id or branch_id" });
+      const { user_id, qr_code_id, formDate, toDate } = req.query;
+      if (!user_id || !qr_code_id) {
+        return res.status(400).json({ success: false, message: "Missing user_id or qr_code_id" });
       }
 
-      let dateCondition = "";
-      const params = [business_id, branch_id];
 
-      if (from_date && to_date) {
-        dateCondition = "AND DATE(created_at) BETWEEN ? AND ?";
-        params.push(from_date, to_date);
-      }
+      const currentDate = new Date();
+      const currentMonthYear = `${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
 
-      const [result] = await db.query(`
-            SELECT 
-              DATE_FORMAT(created_at, '%Y-%m') AS month,
-              SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS positive,
-              SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) AS negative,
-              SUM(CASE WHEN sentiment = 'neutral' THEN 1 ELSE 0 END) AS neutral
-            FROM 
-              review_analysis
-            WHERE 
-              user_id = ? AND qr_code_id = ?
-              ${dateCondition}
-            GROUP BY 
-              DATE_FORMAT(created_at, '%Y-%m')
-            ORDER BY
-              month DESC
-          `, params);
+      const [reviews] = await db.query(`
+SELECT 
+  r.feedback,
+  ra.summary,
+  ra.sentiment
+FROM 
+  review_analysis ra
+LEFT JOIN review r 
+  ON ra.review_id = r.id  
+WHERE 
+  ra.user_id = ? 
+  AND ra.qr_code_id = ?  
+ORDER BY ra.created_at DESC;
+`, [user_id, qr_code_id]);
 
-      if (result.length > 0) {
-        return res.status(200).json({
-          success: true,
-          message: "Monthly sentiment counts fetched successfully",
-          data: result,
-        });
-      } else {
-        return res.status(404).json({ success: false, message: "No sentiment data found." });
-      }
+      const total = reviews.length;
+      const positive = reviews.filter(r => r.sentiment === "positive").length;
+      const negative = reviews.filter(r => r.sentiment === "negative").length;
+      const mixed = reviews.filter(r => r.sentiment === "mixed").length;
+
+      // Percentages
+      const positivePercentage = total ? ((positive / total) * 100).toFixed(2) : "0.00";
+      const negativePercentage = total ? ((negative / total) * 100).toFixed(2) : "0.00";
+      const mixedPercentage = total ? ((mixed / total) * 100).toFixed(2) : "0.00";
+
+      // Response structure
+      const response = {
+        month: currentMonthYear,
+        total,
+        positive,
+        negative,
+        mixed,
+        positive_percentage: positivePercentage,
+        negative_percentage: negativePercentage,
+        mixed_percentage: mixedPercentage,
+        feedbacks: reviews.map(r => ({
+          feedback: r.feedback || "No feedback available",
+          summary: r.summary || "No summary available",
+          sentiment: r.sentiment || "No summary available",
+        }))
+      };
+
+      // Send response
+      res.json({
+        success: true,
+        message: "Current month review analysis fetched successfully",
+        data: response
+      });
 
     } catch (error) {
       return res.status(500).json({ success: false, error: error.message });
@@ -54,10 +72,9 @@ class review_analysisController {
   }
 
 
-
   static async createReviewAnalysis(req, res) {
     try {
-      const { problems, sentiment, solutions, user_id, qr_code_id, review_id, summary, reply, emotional_tone,rating,email } = req.body;
+      const { problems, sentiment, solutions, user_id, qr_code_id, review_id, summary, reply, emotional_tone, rating, email } = req.body;
 
       // Validate input data
       // if (!problems || !sentiment || !solutions || !user_id || !qr_code_id || !review_id || !summary || !reply || !emotional_tone || !rating || !email) {
