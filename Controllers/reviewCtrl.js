@@ -184,7 +184,7 @@ class reviewController {
 
       // Perform the SQL query to fetch the review (rating) and qr_code URL
       const [result] = await db.query(
-        `SELECT r.rating, q.url, q.place_id , q.language
+        `SELECT r.rating, q.url, q.place_id , q.language,q.business_rating
            FROM review r
            JOIN qr_code q ON r.qr_code_id = q.id
            WHERE r.user_id = ? AND r.qr_code_id = ?`,
@@ -207,6 +207,7 @@ class reviewController {
           rating: result[0].rating,
           qr_code_url: result[0].url,
           place_id: result[0].place_id,
+          business_rating: result[0].business_rating,
           language: result[0].language
 
         }

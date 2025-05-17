@@ -4,33 +4,47 @@ const servay_reviews = new Controllers("review_survey");
 import db from "../Config/Connection.js"
 
 class review_analysisController {
-
   static async getCurrentMonthReviewAnalysis(req, res) {
     try {
-
       const { user_id, qr_code_id, formDate, toDate } = req.query;
       if (!user_id || !qr_code_id) {
         return res.status(400).json({ success: false, message: "Missing user_id or qr_code_id" });
       }
 
-
       const currentDate = new Date();
       const currentMonthYear = `${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
 
-      const [reviews] = await db.query(`
-SELECT 
-  r.feedback,
-  ra.summary,
-  ra.sentiment
-FROM 
-  review_analysis ra
-LEFT JOIN review r 
-  ON ra.review_id = r.id  
-WHERE 
-  ra.user_id = ? 
-  AND ra.qr_code_id = ?  
-ORDER BY ra.created_at DESC;
-`, [user_id, qr_code_id]);
+      // Build base query
+      let query = `
+      SELECT 
+        r.feedback,
+        ra.summary,
+        ra.sentiment,
+        ra.created_at
+      FROM 
+        review_analysis ra
+      LEFT JOIN review r 
+        ON ra.review_id = r.id  
+      WHERE 
+        ra.user_id = ? 
+        AND ra.qr_code_id = ?
+    `;
+
+      const params = [user_id, qr_code_id];
+
+      // Add date filter if provided
+      if (formDate && toDate) {
+        const startDate = `${formDate} 00:00:00`;
+        const endDate = `${toDate} 23:59:59`;
+        query += " AND ra.created_at BETWEEN ? AND ? ";
+        params.push(startDate, endDate);
+      }
+
+
+      // Add ordering
+      query += " ORDER BY ra.created_at DESC;";
+
+      const [reviews] = await db.query(query, params);
 
       const total = reviews.length;
       const positive = reviews.filter(r => r.sentiment === "positive").length;
@@ -56,6 +70,7 @@ ORDER BY ra.created_at DESC;
           feedback: r.feedback || "No feedback available",
           summary: r.summary || "No summary available",
           sentiment: r.sentiment || "No summary available",
+          created_at: r.created_at || "No date available",
         }))
       };
 
