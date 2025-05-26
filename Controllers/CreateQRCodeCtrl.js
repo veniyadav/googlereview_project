@@ -31,7 +31,7 @@ class QRCodeController {
   }
   static async createQRCode(req, res) {
     try {
-      const { user_id, url, headline, footer, size, qr_color, offer, place_id, location, business_type, language, business_rating } = req.body;
+      const { user_id, url, headline, place_id, location, language, business_rating } = req.body;
 
       let imageUrl = "";
       let logoUrl = "";
@@ -71,13 +71,8 @@ class QRCodeController {
         user_id,
         url,
         headline,
-        footer,
-        size,
-        qr_color,
-        offer,
         location,
         place_id,
-        business_type,
         language,
         business_rating: business_rating ? business_rating : "null",
         image: imageUrl,
